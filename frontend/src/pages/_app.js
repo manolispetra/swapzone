@@ -1,10 +1,10 @@
 import "../styles/globals.css";
-import { Web3Provider } from "../utils/web3";
+import { WalletProvider } from "../hooks/useWallet";
 
 export default function App({ Component, pageProps }) {
   return (
-    <Web3Provider>
+    <WalletProvider>
       <Component {...pageProps} />
-    </Web3Provider>
+    </WalletProvider>
   );
 }

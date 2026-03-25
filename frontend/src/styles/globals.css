@@ -146,3 +146,23 @@ html, body {
 
 /* Divider */
 .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+/* ── Mobile & Tablet Optimizations ─────────────────────── */
+@media (max-width: 640px) {
+  .card { padding: 16px; border-radius: 14px; }
+  .btn-primary { padding: 12px 20px; font-size: 14px; }
+  .btn-secondary { padding: 9px 16px; font-size: 12px; }
+  .sz-input { font-size: 14px; padding: 11px 14px; }
+  h1 { font-size: 2rem !important; }
+}
+
+@media (max-width: 768px) {
+  .max-w-7xl { padding-left: 12px; padding-right: 12px; }
+}
+
+/* Touch improvements */
+button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+input, select { font-size: 16px !important; } /* Prevent iOS zoom */
+
+/* Safe area for notched phones */
+main { padding-bottom: max(4rem, env(safe-area-inset-bottom)); }
