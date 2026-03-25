@@ -133,11 +133,7 @@ export default function TokenCreator() {
                 </div>
               </div>
             )}
-            <div className="p-3 rounded-xl bg-accent/5 border border-accent/20 text-xs text-accent" style={{ fontFamily:"'Space Mono',monospace" }}>
-              ⚠️ Compile contracts first: cd contracts && npm run compile<br/>
-              Then update SIMPLE_ERC20_BYTECODE in this file.
-            </div>
-            <button className="btn-primary w-full" disabled={deploying||!form.name||!form.symbol} onClick={deployToken}
+<button className="btn-primary w-full" disabled={deploying||!form.name||!form.symbol} onClick={deployToken}
               style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
               {deploying?<><Loader2 size={16} className="animate-spin"/>Deploying…</>:<><Zap size={16}/>Deploy Token</>}
             </button>

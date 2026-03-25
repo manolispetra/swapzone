@@ -11,14 +11,29 @@ function saveOrders(o) { try { localStorage.setItem(ORDERS_KEY,JSON.stringify(o)
 const STATUS_COLOR = { Open:"text-primary", Filled:"text-green-400", Cancelled:"text-muted" };
 const PERIODS = ["5m","1h","24h"];
 
+// GeckoTerminal API (supports Monad mainnet)
+const GECKO_NETWORK = "monad";
 async function dexSearch(query) {
-  const base = "https://api.dexscreener.com/latest/dex";
-  if (ethers.isAddress(query)) {
-    const r = await fetch(`${base}/tokens/${query}`); const d = await r.json();
-    return d.pairs?.find(p=>p.chainId==="monad") || d.pairs?.[0] || null;
-  }
-  const r = await fetch(`${base}/search?q=${encodeURIComponent(query)}`); const d = await r.json();
-  return d.pairs?.find(p=>p.chainId==="monad") || d.pairs?.[0] || null;
+  try {
+    if (ethers.isAddress(query)) {
+      const r = await fetch(`https://api.geckoterminal.com/api/v2/networks/${GECKO_NETWORK}/tokens/${query}`, { headers:{"Accept":"application/json"} });
+      if (!r.ok) throw new Error("not found");
+      const d = await r.json();
+      const pools = d.data?.relationships?.top_pools?.data;
+      if (pools?.length) {
+        const poolId = pools[0].id.split("_")[1];
+        return { pairAddress: poolId, baseToken:{ address: query, symbol: d.data?.attributes?.symbol || "???", name: d.data?.attributes?.name || "Unknown" }, priceUsd: d.data?.attributes?.price_usd, priceChange:{ h24: d.data?.attributes?.price_change_percentage?.h24 || 0 }, volume:{ h24: d.data?.attributes?.volume_usd?.h24 || 0 }, liquidity:{ usd: d.data?.attributes?.total_reserve_in_usd || 0 }, txns:{ h24:{ buys:0, sells:0 } }, pairCreatedAt: null };
+      }
+    }
+    // Search by name
+    const r = await fetch(`https://api.geckoterminal.com/api/v2/search/pools?query=${encodeURIComponent(query)}&network=${GECKO_NETWORK}`, { headers:{"Accept":"application/json"} });
+    if (!r.ok) throw new Error("search failed");
+    const d = await r.json();
+    const pool = d.data?.[0];
+    if (!pool) return null;
+    const attrs = pool.attributes;
+    return { pairAddress: attrs.address, baseToken:{ address: attrs.base_token_address, symbol: attrs.name?.split("/")[0]?.trim() || "???", name: attrs.name || "Unknown" }, priceUsd: attrs.base_token_price_usd, priceChange:{ h24: attrs.price_change_percentage?.h24 || 0 }, volume:{ h24: attrs.volume_usd?.h24 || 0 }, liquidity:{ usd: attrs.reserve_in_usd || 0 }, txns:{ h24:{ buys: attrs.transactions?.h24?.buys || 0, sells: attrs.transactions?.h24?.sells || 0 } }, pairCreatedAt: attrs.pool_created_at ? new Date(attrs.pool_created_at).getTime() : null };
+  } catch(e) { console.warn("GeckoTerminal search failed:", e.message); return null; }
 }
 
 export default function OrderBook() {
@@ -34,6 +49,8 @@ export default function OrderBook() {
   const [foundToken,   setFoundToken]   = useState(null);
   const [orders,       setOrders]       = useState([]);
   const [form,         setForm]         = useState({ tokenIn:MONAD_TOKENS[1], tokenOut:MONAD_TOKENS[2], amountIn:"", limitPrice:"" });
+  const [balIn,        setBalIn]        = useState("—");
+  const [balOut,       setBalOut]       = useState("—");
   const [placing,      setPlacing]      = useState(false);
   const [filling,      setFilling]      = useState(null);
   const [error,        setError]        = useState(null);
@@ -41,13 +58,29 @@ export default function OrderBook() {
 
   useEffect(() => { setOrders(loadOrders()); loadPair(chartToken.address); }, []);
 
+  useEffect(() => {
+    if (!address) return;
+    const fetchBal = async (token, setter) => {
+      try {
+        const p = getReadProvider();
+        if (token.address === "native") { const b = await p.getBalance(address); setter(parseFloat(require("ethers").ethers?.formatEther?.(b) || 0).toFixed(4)); return; }
+        const c = getContract(token.address, ERC20_ABI, p);
+        const b = await c.balanceOf(address);
+        const { ethers } = require("ethers");
+        setter(parseFloat(ethers.formatUnits(b, token.decimals)).toFixed(4));
+      } catch { setter("—"); }
+    };
+    fetchBal(form.tokenIn,  setBalIn);
+    fetchBal(form.tokenOut, setBalOut);
+  }, [address, form.tokenIn, form.tokenOut]);
+
   async function loadPair(addr) {
     if (addr==="native") addr="0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701";
     setLoadingPair(true);
     try {
       const pair = await dexSearch(addr);
       setPairData(pair);
-      if (pair?.pairAddress) setChartUrl(`https://dexscreener.com/monad/${pair.pairAddress}?embed=1&theme=dark&trades=1&info=0`);
+      if (pair?.pairAddress) setChartUrl(`https://www.geckoterminal.com/monad/pools/${pair.pairAddress}?embed=1&light_chart=0`);
       else setChartUrl("");
     } catch { setPairData(null); setChartUrl(""); }
     finally { setLoadingPair(false); }
@@ -214,7 +247,10 @@ export default function OrderBook() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-muted mb-1 block" style={{fontFamily:"'Space Mono',monospace"}}>Amount</label>
+              <div className="flex justify-between mb-1">
+                <label className="text-xs text-muted" style={{fontFamily:"'Space Mono',monospace"}}>Amount</label>
+                <span className="text-xs text-muted" style={{fontFamily:"'Space Mono',monospace"}}>Bal: <span className="text-text">{balIn}</span></span>
+              </div>
               <input className="sz-input" type="number" placeholder="0.0" value={form.amountIn} onChange={e=>setForm(f=>({...f,amountIn:e.target.value}))}/>
             </div>
             <div>

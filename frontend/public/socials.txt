@@ -1,0 +1,6 @@
+# SwapZone Social Links
+# Edit these URLs and redeploy to update the links in the navbar and footer
+# Lines starting with # are comments
+
+TWITTER_URL=https://twitter.com/SwapZoneDEX
+DISCORD_URL=https://discord.gg/swapzone
