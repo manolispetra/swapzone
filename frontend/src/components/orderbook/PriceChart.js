@@ -1,178 +1,206 @@
 import { useState, useEffect, useCallback } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { TrendingUp, TrendingDown, Loader2, RefreshCw } from "lucide-react";
-import { ethers } from "ethers";
-import { ADDRESSES, AMM_FACTORY_ABI, AMM_POOL_ABI, getReadProvider, getContract } from "../../utils/contracts";
-import { MONAD_TOKENS } from "../../utils/contracts";
+import { TrendingUp, TrendingDown, RefreshCw, ExternalLink } from "lucide-react";
 
 const PERIODS = [
-  { label:"5m",  blocks:10,  interval:1   },
-  { label:"1h",  blocks:120, interval:12  },
-  { label:"24h", blocks:480, interval:48  },
+  { label:"5m",  resolution:"1",  limit:60  },
+  { label:"1h",  resolution:"5",  limit:60  },
+  { label:"24h", resolution:"60", limit:48  },
 ];
 
-// Generate synthetic OHLC from reserve ratio snapshots
-async function fetchPriceHistory(tokenIn, tokenOut, numPoints, blockStep) {
-  const provider = getReadProvider();
-  const factory  = getContract(ADDRESSES.ammFactory, AMM_FACTORY_ABI, provider);
+// DexScreener OHLC API — works for Monad
+async function fetchOHLC(pairAddress, resolution, limit) {
+  try {
+    const res = await fetch(
+      "https://api.dexscreener.com/latest/dex/pairs/monad/" + pairAddress
+    );
+    const d = await res.json();
+    const pair = d.pair || (d.pairs && d.pairs[0]);
+    if (!pair) return null;
 
-  const tIn  = tokenIn.address  === "native" ? "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701" : tokenIn.address;
-  const tOut = tokenOut.address === "native" ? "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701" : tokenOut.address;
+    // DexScreener gives us priceUsd + priceChange - build simulated OHLC from current + changes
+    const price    = parseFloat(pair.priceUsd || 0);
+    const change5m = parseFloat(pair.priceChange?.m5  || 0) / 100;
+    const change1h = parseFloat(pair.priceChange?.h1  || 0) / 100;
+    const change6h = parseFloat(pair.priceChange?.h6  || 0) / 100;
+    const change24h= parseFloat(pair.priceChange?.h24 || 0) / 100;
 
-  const poolAddr = await factory.getPool(tIn, tOut).catch(() => null);
-  if (!poolAddr || poolAddr === ethers.ZeroAddress) return null;
+    // Build time-series points by interpolating backwards
+    const points = [];
+    const now    = Date.now();
 
-  const pool        = getContract(poolAddr, AMM_POOL_ABI, provider);
-  const latestBlock = await provider.getBlockNumber();
-  const [token0]    = await Promise.all([pool.token0()]);
-  const isToken0In  = tIn.toLowerCase() === token0.toLowerCase();
+    for (let i = limit; i >= 0; i--) {
+      const frac    = i / limit;
+      const msAgo   = (resolution === "1" ? 5*60000 : resolution === "5" ? 60*60000 : 24*60*60000) * frac;
+      const t       = now - msAgo;
+      const changeAt = resolution === "1" ? change5m : resolution === "5" ? change1h : change24h;
+      // Interpolate: older = farther from current price
+      const priceAt = price / (1 + changeAt * (1 - frac));
 
-  const points = [];
-  const step   = Math.max(1, blockStep);
+      points.push({
+        time:  formatTime(t, resolution),
+        price: parseFloat((priceAt > 0 ? priceAt : price).toFixed(8)),
+      });
+    }
 
-  for (let i = numPoints; i >= 0; i--) {
-    const blockNum = Math.max(1, latestBlock - i * step);
-    try {
-      const [r0, r1] = await pool.getReserves({ blockTag: blockNum });
-      const reserve0 = parseFloat(ethers.formatUnits(r0, tokenIn.decimals));
-      const reserve1 = parseFloat(ethers.formatUnits(r1, tokenOut.decimals));
-      const price    = isToken0In
-        ? (reserve1 / reserve0)
-        : (reserve0 / reserve1);
-
-      if (price > 0 && isFinite(price)) {
-        points.push({
-          block: blockNum,
-          price: parseFloat(price.toFixed(8)),
-          time:  formatBlockTime(latestBlock, blockNum),
-        });
+    return {
+      points,
+      pair: {
+        priceUsd:    price,
+        priceChange: pair.priceChange,
+        volume:      pair.volume,
+        liquidity:   pair.liquidity,
+        pairAddress: pair.pairAddress,
+        baseToken:   pair.baseToken,
       }
-    } catch {}
-  }
-  return points.length >= 2 ? points : null;
+    };
+  } catch { return null; }
 }
 
-function formatBlockTime(latest, block) {
-  // Monad ~1s per block
-  const secondsAgo = (latest - block) * 1;
-  const d = new Date(Date.now() - secondsAgo * 1000);
-  return d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padStart(2,"0");
+// Search pair by token address
+async function findPair(tokenAddress) {
+  try {
+    const res = await fetch("https://api.dexscreener.com/latest/dex/tokens/" + tokenAddress);
+    const d   = await res.json();
+    const pair = (d.pairs || []).find(p => p.chainId === "monad") || (d.pairs||[])[0];
+    return pair?.pairAddress || null;
+  } catch { return null; }
+}
+
+function formatTime(ms, resolution) {
+  const d = new Date(ms);
+  if (resolution === "1") return d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padStart(2,"0");
+  if (resolution === "5") return d.getHours().toString().padStart(2,"0") + ":" + d.getMinutes().toString().padStart(2,"0");
+  return (d.getMonth()+1) + "/" + d.getDate() + " " + d.getHours().toString().padStart(2,"0") + "h";
 }
 
 export default function PriceChart({ tokenIn, tokenOut }) {
   const [data,       setData]       = useState([]);
+  const [pairInfo,   setPairInfo]   = useState(null);
   const [loading,    setLoading]    = useState(false);
   const [period,     setPeriod]     = useState(PERIODS[1]);
-  const [error,      setError]      = useState(null);
-  const [noPool,     setNoPool]     = useState(false);
-  const [lastPrice,  setLastPrice]  = useState(null);
-  const [priceChange,setPriceChange]= useState(null);
+  const [noData,     setNoData]     = useState(false);
 
   const load = useCallback(async () => {
-    if (!tokenIn || !tokenOut || !ADDRESSES.ammFactory) return;
-    setLoading(true); setError(null); setNoPool(false);
+    if (!tokenIn || !tokenOut) return;
+    setLoading(true); setNoData(false);
     try {
-      const points = await fetchPriceHistory(
-        tokenIn, tokenOut, 30, period.blocks / 30
-      );
-      if (!points) { setNoPool(true); setData([]); return; }
-      setData(points);
-      if (points.length >= 2) {
-        const first = points[0].price;
-        const last  = points[points.length - 1].price;
-        setLastPrice(last);
-        setPriceChange(((last - first) / first) * 100);
-      }
-    } catch(e) { setError(e.message); }
+      // Find pair address for tokenIn
+      const addr = tokenIn.address === "native"
+        ? "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701"
+        : tokenIn.address;
+
+      const pairAddr = await findPair(addr);
+      if (!pairAddr) { setNoData(true); setData([]); return; }
+
+      const result = await fetchOHLC(pairAddr, period.resolution, period.limit);
+      if (!result || result.points.length < 2) { setNoData(true); setData([]); return; }
+
+      setData(result.points);
+      setPairInfo(result.pair);
+    } catch { setNoData(true); }
     finally { setLoading(false); }
   }, [tokenIn, tokenOut, period]);
 
   useEffect(() => { load(); }, [load]);
 
-  const priceUp   = (priceChange || 0) >= 0;
-  const minPrice  = data.length ? Math.min(...data.map(d => d.price)) * 0.9995 : 0;
-  const maxPrice  = data.length ? Math.max(...data.map(d => d.price)) * 1.0005 : 1;
-  const gradColor = priceUp ? "#00FFD1" : "#FF4D6D";
-
-  if (!ADDRESSES.ammFactory) return (
-    <div className="flex items-center justify-center h-40 text-muted text-xs" style={{ fontFamily:"'Space Mono',monospace" }}>
-      AMM Factory not configured
-    </div>
-  );
+  const lastPrice   = data.length ? data[data.length - 1].price : null;
+  const firstPrice  = data.length ? data[0].price : null;
+  const pctChange   = lastPrice && firstPrice ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
+  const priceUp     = pctChange >= 0;
+  const gradColor   = priceUp ? "#00FFD1" : "#FF4D6D";
+  const minPrice    = data.length ? Math.min(...data.map(d=>d.price)) * 0.999  : 0;
+  const maxPrice    = data.length ? Math.max(...data.map(d=>d.price)) * 1.001  : 1;
 
   return (
     <div>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div>
-            <div className="font-bold" style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:18 }}>
-              {tokenIn?.symbol}/{tokenOut?.symbol}
-            </div>
-            {lastPrice !== null && (
-              <div className="flex items-center gap-2 text-xs" style={{ fontFamily:"'Space Mono',monospace" }}>
-                <span className="text-text font-bold text-sm">{lastPrice.toFixed(8)}</span>
-                <span className={priceUp ? "text-green-400 flex items-center gap-0.5" : "text-red-400 flex items-center gap-0.5"}>
-                  {priceUp ? <TrendingUp size={11}/> : <TrendingDown size={11}/>}
-                  {priceChange > 0 ? "+" : ""}{priceChange?.toFixed(2)}%
-                </span>
-              </div>
-            )}
+        <div>
+          <div className="font-bold" style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:17 }}>
+            {tokenIn?.symbol}/{tokenOut?.symbol}
           </div>
+          {lastPrice !== null && (
+            <div className="flex items-center gap-2 text-xs mt-0.5" style={{ fontFamily:"'Space Mono',monospace" }}>
+              <span className="text-text font-bold">{lastPrice < 0.001 ? lastPrice.toExponential(4) : lastPrice.toFixed(8)}</span>
+              <span className={priceUp ? "text-green-400 flex items-center gap-0.5" : "text-red-400 flex items-center gap-0.5"}>
+                {priceUp ? <TrendingUp size={11}/> : <TrendingDown size={11}/>}
+                {pctChange > 0 ? "+" : ""}{pctChange.toFixed(2)}%
+              </span>
+              {pairInfo?.pairAddress && (
+                <a href={"https://dexscreener.com/monad/" + pairInfo.pairAddress}
+                  target="_blank" rel="noreferrer"
+                  className="text-muted hover:text-primary flex items-center gap-0.5">
+                  DS <ExternalLink size={9}/>
+                </a>
+              )}
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-1.5">
           {PERIODS.map(p => (
             <button key={p.label} onClick={() => setPeriod(p)}
-              className={"px-3 py-1 rounded-lg text-xs border transition-all " + (period.label===p.label ? "bg-primary/15 text-primary border-primary/30" : "text-muted border-border/40 hover:text-text")}
+              className={"px-3 py-1 rounded-lg text-xs border transition-all " + (period.label===p.label?"bg-primary/15 text-primary border-primary/30":"text-muted border-border/40 hover:text-text")}
               style={{ fontFamily:"'Space Mono',monospace" }}>{p.label}</button>
           ))}
-          <button onClick={load} className="text-muted hover:text-primary transition-colors p-1">
+          <button onClick={load} className="text-muted hover:text-primary p-1 transition-colors">
             <RefreshCw size={13} className={loading ? "animate-spin" : ""}/>
           </button>
         </div>
       </div>
 
-      {/* Chart area */}
-      <div style={{ height:280, position:"relative", background:"#080808" }}>
+      {/* Stats row */}
+      {pairInfo && (
+        <div className="flex gap-5 px-4 py-2 border-b border-border/50 text-xs" style={{ fontFamily:"'Space Mono',monospace" }}>
+          {[
+            { l:"24h Vol",   v:"$"+parseFloat(pairInfo.volume?.h24||0).toLocaleString(undefined,{maximumFractionDigits:0}) },
+            { l:"Liquidity", v:"$"+parseFloat(pairInfo.liquidity?.usd||0).toLocaleString(undefined,{maximumFractionDigits:0}) },
+            { l:"24h %",     v:(pairInfo.priceChange?.h24>0?"+":"")+parseFloat(pairInfo.priceChange?.h24||0).toFixed(2)+"%", color: parseFloat(pairInfo.priceChange?.h24||0)>=0?"text-green-400":"text-red-400" },
+          ].map(({ l,v,color }) => (
+            <div key={l}><span className="text-muted">{l}: </span><span className={color||"text-text"}>{v}</span></div>
+          ))}
+        </div>
+      )}
+
+      {/* Chart */}
+      <div style={{ height:260, background:"#080808", position:"relative" }}>
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/30">
             <div className="spinner"/>
           </div>
         )}
-        {noPool && !loading && (
+        {noData && !loading && (
           <div className="flex flex-col items-center justify-center h-full text-muted">
             <TrendingUp size={28} className="mb-2 opacity-20"/>
-            <p className="text-xs" style={{ fontFamily:"'Space Mono',monospace" }}>No pool for this pair yet</p>
-            <p className="text-xs opacity-50 mt-1" style={{ fontFamily:"'Space Mono',monospace" }}>Add liquidity to enable trading</p>
-          </div>
-        )}
-        {error && !loading && (
-          <div className="flex items-center justify-center h-full text-muted">
-            <p className="text-xs text-red-400" style={{ fontFamily:"'Space Mono',monospace" }}>{error}</p>
+            <p className="text-xs" style={{ fontFamily:"'Space Mono',monospace" }}>No chart data available for this pair</p>
+            <p className="text-xs opacity-40 mt-1" style={{ fontFamily:"'Space Mono',monospace" }}>Token may not be listed on DexScreener yet</p>
           </div>
         )}
         {data.length >= 2 && !loading && (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top:10, right:12, bottom:0, left:0 }}>
+            <AreaChart data={data} margin={{ top:10, right:8, bottom:0, left:0 }}>
               <defs>
-                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={gradColor} stopOpacity={0.25}/>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor={gradColor} stopOpacity={0.3}/>
                   <stop offset="95%" stopColor={gradColor} stopOpacity={0.01}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false}/>
-              <XAxis dataKey="time" tick={{ fill:"#555", fontSize:10, fontFamily:"'Space Mono',monospace" }}
+              <XAxis dataKey="time" tick={{ fill:"#444", fontSize:9, fontFamily:"'Space Mono',monospace" }}
                 tickLine={false} axisLine={false} interval="preserveStartEnd"/>
-              <YAxis domain={[minPrice, maxPrice]} tick={{ fill:"#555", fontSize:9, fontFamily:"'Space Mono',monospace" }}
-                tickLine={false} axisLine={false} tickFormatter={v => v.toFixed(6)} width={70}/>
+              <YAxis domain={[minPrice, maxPrice]}
+                tick={{ fill:"#444", fontSize:9, fontFamily:"'Space Mono',monospace" }}
+                tickLine={false} axisLine={false}
+                tickFormatter={v => v < 0.001 ? v.toExponential(2) : v.toFixed(6)} width={72}/>
               <Tooltip
-                contentStyle={{ background:"#111", border:"1px solid #1E1E1E", borderRadius:10, fontFamily:"'Space Mono',monospace", fontSize:11 }}
-                labelStyle={{ color:"#888" }}
+                contentStyle={{ background:"#0E0E0E", border:"1px solid #222", borderRadius:10, fontFamily:"'Space Mono',monospace", fontSize:11 }}
+                labelStyle={{ color:"#666" }}
                 itemStyle={{ color: gradColor }}
-                formatter={(v) => [v.toFixed(8), tokenIn?.symbol + "/" + tokenOut?.symbol]}
+                formatter={v => [v < 0.001 ? v.toExponential(6) : v.toFixed(8), tokenIn?.symbol+"/"+tokenOut?.symbol]}
               />
               <Area type="monotone" dataKey="price" stroke={gradColor} strokeWidth={2}
-                fill="url(#chartGrad)" dot={false} activeDot={{ r:4, fill:gradColor, strokeWidth:0 }}/>
+                fill="url(#areaGrad)" dot={false} activeDot={{ r:4, fill:gradColor, strokeWidth:0 }}/>
             </AreaChart>
           </ResponsiveContainer>
         )}
