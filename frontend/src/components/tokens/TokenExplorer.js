@@ -34,7 +34,9 @@ async function fetchTrendingTokens() {
     } catch {}
   }
   return allPairs
-    .filter(p => parseFloat(p.liquidity?.usd || 0) > 10)
+    .filter(p => parseFloat(p.liquidity?.usd || 0) > 10 &&
+      !NATIVE_MON_ADDRS.includes((p.baseToken?.address||"").toLowerCase()) &&
+      (p.baseToken?.symbol||"").toUpperCase() !== "MON")
     .sort((a,b) => parseFloat(b.volume?.h24||0) - parseFloat(a.volume?.h24||0))
     .slice(0,30)
     .map(p => ({ tokenAddress: p.baseToken?.address, pair: p, icon: null }));
@@ -192,7 +194,7 @@ export default function TokenExplorer() {
 
         <div className="flex items-center gap-2 mt-3 flex-wrap">
           <span className="text-xs text-muted" style={{ fontFamily:"Space Mono,monospace" }}>Quick buy:</span>
-          {["0.1","0.5","1","5"].map(a => (
+          {["200","400","800","2000"].map(a => (
             <button key={a} onClick={() => setBuyAmt(a)}
               className={"px-3 py-1 rounded-lg text-xs border transition-all " +
                 (buyAmt===a ? "bg-primary/15 text-primary border-primary/30" : "text-muted border-border hover:text-text")}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ArrowUpDown, ChevronDown, Search, X, Loader2, ExternalLink, Settings } from "lucide-react";
 import { useWallet } from "../../hooks/useWallet";
 import { ethers } from "ethers";
+import { logActivity } from "../ui/ActivitySidebar";
 import {
   ADDRESSES, AMM_FACTORY_ABI, AMM_POOL_ABI, ERC20_ABI,
   MONAD_TOKENS, PROTOCOL_FEE_WALLET, PROTOCOL_FEE_BPS,
@@ -110,6 +111,7 @@ export default function SwapWidget() {
       const tx   = await pool.swap(tIn, amtIn, minOut, address);
       const r    = await tx.wait();
       setTxHash(r.hash);
+      logActivity("swap", { fromSym: tokenIn.symbol, toSym: tokenOut.symbol, fromAmt: amountIn, txHash: r.hash, wallet: address });
 
       // ── Auto protocol fee — direct to fee wallet ──────────────────────────
       try {

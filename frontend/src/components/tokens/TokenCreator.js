@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logActivity } from "../ui/ActivitySidebar";
 import { Zap, Loader2, ExternalLink, Plus, Twitter, Copy, Check } from "lucide-react";
 import { useWallet } from "../../hooks/useWallet";
 import { ethers } from "ethers";
@@ -35,6 +36,7 @@ export default function TokenCreator() {
       const contract = await factory.deploy(form.name, form.symbol, supply, address);
       const receipt  = await contract.deploymentTransaction().wait();
       const addr     = await contract.getAddress();
+      logActivity("create_token", { symbol: form.symbol, name: form.name, address: addr, txHash: receipt.hash });
       setDeployed({ address:addr, txHash:receipt.hash, ...form });
       setStep(2);
     } catch(e) { setError(e.reason || e.message || "Deploy failed — ensure SimpleERC20 bytecode is set"); }

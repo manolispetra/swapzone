@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Minus, Loader2, ChevronDown, X, Search } from "lucide-react";
 import { useWallet } from "../../hooks/useWallet";
 import { ethers } from "ethers";
+import { logActivity } from "../ui/ActivitySidebar";
 import {
   ADDRESSES, AMM_FACTORY_ABI, AMM_POOL_ABI, ERC20_ABI,
   MONAD_TOKENS, getReadProvider, getContract, ensureAllowance, fmt
@@ -117,6 +118,7 @@ export default function LiquidityManager() {
       const t    = await pool.addLiquidity(a0, a1, a0*95n/100n, a1*95n/100n, address);
       const r    = await t.wait();
       setTx(r.hash);
+      logActivity("add_liquidity", { tokenA: tokenA.symbol, tokenB: tokenB.symbol, txHash: r.hash, wallet: address });
       loadPool(); fetchBalances(); loadAllPools();
       setAmount0(""); setAmount1("");
     } catch (e) { setError(e.reason || e.message); }
@@ -137,6 +139,7 @@ export default function LiquidityManager() {
       const t = await pool.removeLiquidity(lp, 0n, 0n, address);
       const r = await t.wait();
       setTx(r.hash);
+      logActivity("add_liquidity", { tokenA: tokenA.symbol, tokenB: tokenB.symbol, txHash: r.hash, wallet: address });
       loadPool(); fetchBalances();
       setLpAmount("");
     } catch (e) { setError(e.reason || e.message); }

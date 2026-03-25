@@ -4,6 +4,7 @@ import { useWallet } from "../../hooks/useWallet";
 import { ethers } from "ethers";
 import { ADDRESSES, AMM_FACTORY_ABI, AMM_POOL_ABI, ERC20_ABI, MONAD_TOKENS, PROTOCOL_FEE_WALLET, PROTOCOL_FEE_BPS, getReadProvider, getContract, ensureAllowance } from "../../utils/contracts";
 import PriceChart from "./PriceChart";
+import { logActivity } from "../ui/ActivitySidebar";
 import { TokenLogo } from "../swap/SwapWidget";
 
 const ORDERS_KEY = "swapzone_orders_v2";
@@ -115,7 +116,8 @@ export default function OrderBook() {
     setPlacing(true); setError(null);
     try {
       const order = { id:Date.now().toString(), maker:address, tokenIn:form.tokenIn, tokenOut:form.tokenOut, amountIn:form.amountIn, limitPrice:form.limitPrice, status:"Open", createdAt:Date.now() };
-      const u = [order,...orders]; setOrders(u); saveOrders(u);
+      logActivity("order", { fromSym: form.tokenIn.symbol, toSym: form.tokenOut.symbol, price: form.limitPrice, wallet: address });
+    const u = [order,...orders]; setOrders(u); saveOrders(u);
       setForm(f=>({...f,amountIn:"",limitPrice:""}));
     } catch(e) { setError(e.message); }
     finally { setPlacing(false); }

@@ -1,4 +1,5 @@
 import Navbar from "./Navbar";
+import ActivitySidebar from "./ActivitySidebar";
 import MatrixBackground from "./MatrixBackground";
 import Head from "next/head";
 
@@ -22,10 +23,11 @@ export default function Layout({ children, title = "SwapZone DEX" }) {
 
       <div className="min-h-screen flex flex-col" style={{ position:"relative", zIndex:1 }}>
         <Navbar />
-        <main className="pt-16 sm:pt-20 px-3 sm:px-4 max-w-7xl w-full mx-auto pb-16 flex-1">
+        <main className="pt-16 sm:pt-20 px-3 sm:px-4 max-w-7xl w-full mx-auto pb-16 flex-1" style={{ paddingRight: 'calc(0.75rem + 40px)' }}>
           {children}
         </main>
 
+        <ActivitySidebar />
         {/* Footer */}
         <footer className="border-t border-border py-4 px-4" style={{ background:"rgba(10,10,10,0.8)", backdropFilter:"blur(8px)", position:"relative", zIndex:2 }}>
           <div className="flex items-center justify-center gap-2">

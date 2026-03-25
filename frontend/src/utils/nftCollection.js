@@ -1,454 +1,380 @@
 
 export const COLLECTION_NAME   = "SwapZone Genesis";
 export const COLLECTION_SYMBOL = "SZGEN";
-export const COLLECTION_DESC   = "10 unique pixel characters born from the Monad blockchain. Each has a distinct personality, rare traits, and a DeFi backstory. Earn them through the Referral Program.";
+export const COLLECTION_DESC   = "10 generative geometric NFTs from the SwapZone protocol. Each piece is a unique abstract composition — circles, prisms, vortices, orbits. Earn them through the Referral Program.";
 export const TOTAL_SUPPLY      = 10;
 
 export const RARITY_TIERS = {
-  LEGENDARY: { label:"Legendary ✦", color:"#FFD700", glow:"0 0 30px #FFD70066,0 0 60px #FFD70022", bg:"#1A1200" },
-  EPIC:      { label:"Epic ◈",      color:"#8458FF", glow:"0 0 24px #8458FF55",                    bg:"#0F0820" },
-  RARE:      { label:"Rare ◆",      color:"#00FFD1", glow:"0 0 16px #00FFD144",                    bg:"#001812" },
-  UNCOMMON:  { label:"Uncommon",    color:"#4FC3F7", glow:"none",                                   bg:"#081018" },
-  COMMON:    { label:"Common",      color:"#888888", glow:"none",                                   bg:"#101010" },
+  LEGENDARY: { label:"Legendary ✦", color:"#FFD700", glow:"0 0 30px #FFD70066,0 0 60px #FFD70022", bg:"#0A0814" },
+  EPIC:      { label:"Epic ◈",      color:"#8458FF", glow:"0 0 24px #8458FF55",                    bg:"#080614" },
+  RARE:      { label:"Rare ◆",      color:"#00FFD1", glow:"0 0 16px #00FFD144",                    bg:"#060C10" },
+  UNCOMMON:  { label:"Uncommon",    color:"#4FC3F7", glow:"none",                                   bg:"#060810" },
+  COMMON:    { label:"Common",      color:"#888888", glow:"none",                                   bg:"#080808" },
 };
 
-// Render pixel art SVG — 24x32 character grid
+// Render geometric SVG — each NFT is a unique abstract composition
 export function renderPixelSVG(nft, size = 240) {
-  const cols  = nft.art[0].length;
-  const rows  = nft.art.length;
-  const cell  = size / cols;
-  const h     = cell * rows;
-  let rects   = "";
-
-  nft.art.forEach((row, y) => {
-    [...row].forEach((v, x) => {
-      if (v === "." || v === " ") return;
-      const idx = parseInt(v, 16);
-      if (!idx) return;
-      const col = nft.palette[idx - 1];
-      if (!col) return;
-      rects += `<rect x="${(x*cell).toFixed(1)}" y="${(y*cell).toFixed(1)}" width="${(cell+0.4).toFixed(1)}" height="${(cell+0.4).toFixed(1)}" fill="${col}"/>`;
-    });
-  });
-
-  // Aspect-ratio preserving viewBox
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="${size}" height="${size}" fill="${nft.bg}"/><g transform="translate(0,${((size-h)/2).toFixed(1)})">${rects}</g></svg>`;
+  return nft.render(size);
 }
 
-// ── NFT Collection ─────────────────────────────────────────────────────────────
-// Format: 24 chars wide, each char = hex index (0=transparent, 1-F=palette color)
-// Palette: 15 colors max per NFT
-// Inspired by: bold outlines, bright BG, accessories, lab coat / sci-fi style
+// ── Z Logo (center of each NFT) ────────────────────────────────────────────
+function zLogo(cx, cy, r, color, stroke = 1.5) {
+  const s = r * 0.55;
+  return `<text x="${cx}" y="${cy + s*0.38}" text-anchor="middle" font-family="monospace" font-weight="900" font-size="${r*1.1}" fill="none" stroke="${color}" stroke-width="${stroke}" letter-spacing="-2">Z</text>`;
+}
+
+function baseStyle(size, bg) {
+  return `<rect width="${size}" height="${size}" fill="${bg}"/>`;
+}
+
+function svgWrap(size, bg, content) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${baseStyle(size,bg)}${content}</svg>`;
+}
+
+// Scanline overlay for atmosphere
+function scanlines(size) {
+  let lines = "";
+  for (let y = 0; y < size; y += 4) {
+    lines += `<line x1="0" y1="${y}" x2="${size}" y2="${y}" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>`;
+  }
+  return lines;
+}
 
 export const NFT_COLLECTION = [
+  // ── 1. Genesis Circle ───────────────────────────────────────────────────
   {
-    id:1, name:"Golden Validator", rarity:"LEGENDARY", rarityScore:99,
-    bg:"#5500BB",
-    description:"The rarest. Crowned in consensus gold. Validator armor glows with finality. Has never missed a single block.",
-    traits:[{t:"Background",v:"Deep Purple"},{t:"Skin",v:"Gold"},{t:"Crown",v:"Consensus Crown"},{t:"Coat",v:"Validator Armor"},{t:"Eyes",v:"Laser White"},{t:"Aura",v:"Golden Glow"}],
-    palette:["#1A1A1A","#D4A017","#FFD700","#FFF3A0","#FFFFFF","#836EF9","#B8860B","#4B0082","#FFE066","#FF4444","#C0C0C0","#333333","#FF8C00","#AAAAAA","#6600CC"],
-    art:[
-      "........333333333.......",
-      ".......33222233333......",
-      "......3322222222333.....",
-      "......3322222222333.....",
-      ".......33299299333......",
-      ".......33255255333......",
-      ".......33222222333......",
-      ".......33244442333......",
-      ".......33244442333......",
-      ".......33222222333......",
-      "......333222222333......",
-      ".....33366622663333.....",
-      ".....33666666666333.....",
-      ".....36666666666633.....",
-      ".....36666666666633.....",
-      ".....36666666666633.....",
-      ".....36661616166633.....",
-      ".....36666666666633.....",
-      ".....33666666666333.....",
-      "......3366666663333.....",
-      ".....333.66666.333......",
-      ".....3F3.66666.333......",
-      ".....3FF3.6666.333......",
-      ".....33F3......333......",
-      ".....33.3......33.......",
-      ".....3..3......3........",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:1, name:"Genesis #001", rarity:"LEGENDARY", rarityScore:99,
+    description:"The origin. A single perfect circle orbited by directional arrows — the first swap, the first block, the genesis of SwapZone.",
+    traits:[{t:"Shape",v:"Circle"},{t:"Style",v:"Orbit"},{t:"Color",v:"Cyan/Purple"},{t:"Arrows",v:"3 Directional"},{t:"Rarity",v:"1 of 1"}],
+    render(size) {
+      const cx = size/2, cy = size/2, R = size*0.36;
+      const c1 = "#00FFD1", c2 = "#8458FF";
+      let content = `
+        <!-- Outer glow ring -->
+        <circle cx="${cx}" cy="${cy}" r="${R+8}" fill="none" stroke="${c1}" stroke-width="0.5" opacity="0.2"/>
+        <!-- Main arc (270 degrees) -->
+        <path d="M${cx+R},${cy} A${R},${R} 0 1,1 ${cx},${cy-R}" fill="none" stroke="${c1}" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Arrow right -->
+        <polygon points="${cx+R+2},${cy} ${cx+R-8},${cy-7} ${cx+R-8},${cy+7}" fill="${c1}"/>
+        <!-- Purple arc fragment top-left -->
+        <path d="M${cx-R*0.7},${cy-R*0.7} A${R},${R} 0 0,0 ${cx},${cy-R}" fill="none" stroke="${c2}" stroke-width="2" stroke-linecap="round" stroke-dasharray="8 4"/>
+        <!-- Arrow top-left -->
+        <polygon points="${cx-R*0.72},${cy-R*0.7} ${cx-R*0.56},${cy-R*0.58} ${cx-R*0.84},${cy-R*0.54}" fill="${c2}"/>
+        <!-- Inner circle -->
+        <circle cx="${cx}" cy="${cy}" r="${R*0.38}" fill="none" stroke="${c1}" stroke-width="1.5" opacity="0.7"/>
+        <!-- Z center -->
+        ${zLogo(cx, cy, R*0.26, c1, 1.8)}
+        <!-- Dots on orbit -->
+        <circle cx="${cx+R*0.7}" cy="${cy-R*0.7}" r="3" fill="${c2}" opacity="0.8"/>
+        <circle cx="${cx-R*0.5}" cy="${cy+R*0.86}" r="2" fill="${c1}" opacity="0.6"/>
+        <!-- Subtle grid lines -->
+        <line x1="0" y1="${cy}" x2="${size}" y2="${cy}" stroke="rgba(0,255,209,0.06)" stroke-width="1"/>
+        <line x1="${cx}" y1="0" x2="${cx}" y2="${size}" stroke="rgba(0,255,209,0.06)" stroke-width="1"/>
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#080C14", content);
+    }
   },
+
+  // ── 2. Vortex #002 ──────────────────────────────────────────────────────
   {
-    id:2, name:"Teal Phantom", rarity:"LEGENDARY", rarityScore:96,
-    bg:"#002222",
-    description:"Materializes from deep liquidity pools. Half visible, half void. The most elusive Genesis character.",
-    traits:[{t:"Background",v:"Deep Teal"},{t:"Skin",v:"Phantom Teal"},{t:"Hood",v:"Shadow Hood"},{t:"Coat",v:"Ghost Cloak"},{t:"Eyes",v:"Glowing Cyan"},{t:"Aura",v:"Pool Shimmer"}],
-    palette:["#1A1A1A","#00B4A0","#00FFD1","#80FFF0","#FFFFFF","#006655","#003322","#004D4D","#88FFEE","#0A3030","#AAFFDD","#001A1A","#33FFDD","#005544","#00FFAA"],
-    art:[
-      "........111111111.......",
-      ".......11222211111......",
-      "......1122222221111.....",
-      "......1122222221111.....",
-      ".......11233323111......",
-      ".......11255255111......",
-      ".......11222222111......",
-      ".......11255552111......",
-      ".......11222222111......",
-      "......111122222111......",
-      ".....111162222611111....",
-      ".....116666222666111....",
-      ".....166666666666611....",
-      ".....166666666666611....",
-      ".....166666666666611....",
-      ".....166666666666611....",
-      ".....166666999666611....",
-      ".....166666666666611....",
-      ".....116666666666111....",
-      "......11666666661111....",
-      ".....111.66669.111......",
-      ".....1A1.66666.111......",
-      ".....1AA1.6666.111......",
-      ".....11A1......111......",
-      ".....11.1......11.......",
-      ".....1..1......1........",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:2, name:"Vortex #002", rarity:"LEGENDARY", rarityScore:96,
+    description:"Spinning compass of liquidity. Four cardinal arrows point to infinite pools. The Phantom's symbol.",
+    traits:[{t:"Shape",v:"Compass"},{t:"Style",v:"Vortex"},{t:"Color",v:"Teal/Purple"},{t:"Arrows",v:"4 Cardinal"},{t:"Rings",v:"Concentric"}],
+    render(size) {
+      const cx = size/2, cy = size/2, R = size*0.36;
+      const c1 = "#00FFD1", c2 = "#8458FF", c3 = "#6633BB";
+      let content = `
+        <!-- Outer ring -->
+        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${c3}" stroke-width="1" opacity="0.4"/>
+        <!-- Mid ring -->
+        <circle cx="${cx}" cy="${cy}" r="${R*0.6}" fill="none" stroke="${c1}" stroke-width="1" opacity="0.3"/>
+        <!-- 4 compass arrows -->
+        <!-- Top -->
+        <polygon points="${cx},${cy-R*0.88} ${cx-10},${cy-R*0.6} ${cx+10},${cy-R*0.6}" fill="${c1}"/>
+        <!-- Bottom -->
+        <polygon points="${cx},${cy+R*0.88} ${cx-10},${cy+R*0.6} ${cx+10},${cy+R*0.6}" fill="${c2}"/>
+        <!-- Left -->
+        <polygon points="${cx-R*0.88},${cy} ${cx-R*0.6},${cy-10} ${cx-R*0.6},${cy+10}" fill="${c2}"/>
+        <!-- Right -->
+        <polygon points="${cx+R*0.88},${cy} ${cx+R*0.6},${cy-10} ${cx+R*0.6},${cy+10}" fill="${c1}"/>
+        <!-- Lines to arrows -->
+        <line x1="${cx}" y1="${cy-R*0.38}" x2="${cx}" y2="${cy-R*0.6}" stroke="${c1}" stroke-width="1.5" opacity="0.6"/>
+        <line x1="${cx}" y1="${cy+R*0.38}" x2="${cx}" y2="${cy+R*0.6}" stroke="${c2}" stroke-width="1.5" opacity="0.6"/>
+        <line x1="${cx-R*0.38}" y1="${cy}" x2="${cx-R*0.6}" y2="${cy}" stroke="${c2}" stroke-width="1.5" opacity="0.6"/>
+        <line x1="${cx+R*0.38}" y1="${cy}" x2="${cx+R*0.6}" y2="${cy}" stroke="${c1}" stroke-width="1.5" opacity="0.6"/>
+        <!-- Inner circle Z -->
+        <circle cx="${cx}" cy="${cy}" r="${R*0.36}" fill="none" stroke="${c1}" stroke-width="1.5"/>
+        ${zLogo(cx, cy, R*0.24, c1, 1.8)}
+        <!-- Diagonal accent lines -->
+        <line x1="${cx-R*0.4}" y1="${cy-R*0.4}" x2="${cx+R*0.4}" y2="${cy+R*0.4}" stroke="${c3}" stroke-width="0.8" opacity="0.3"/>
+        <line x1="${cx+R*0.4}" y1="${cy-R*0.4}" x2="${cx-R*0.4}" y2="${cy+R*0.4}" stroke="${c3}" stroke-width="0.8" opacity="0.3"/>
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#07060F", content);
+    }
   },
+
+  // ── 3. Prism #003 ───────────────────────────────────────────────────────
   {
-    id:3, name:"AMM Wizard", rarity:"EPIC", rarityScore:88,
-    bg:"#1A0A3A",
-    description:"Master of x·y=k. The formula hat crackles with swap energy. Staff charges with every trade.",
-    traits:[{t:"Background",v:"Mystic Purple"},{t:"Skin",v:"Pale"},{t:"Hat",v:"Formula Hat"},{t:"Coat",v:"Wizard Robe"},{t:"Eyes",v:"Magic Purple"},{t:"Staff",v:"Fee Staff"}],
-    palette:["#1A1A1A","#C8A882","#8458FF","#D4B8FF","#FFFFFF","#5A3BAA","#E8D0A0","#3A1F7A","#B088FF","#FF6B6B","#9966FF","#333333","#CCAAFF","#FF8888","#7744CC"],
-    art:[
-      "......2223332222........",
-      ".....222333332222.......",
-      ".....223333333222.......",
-      "......2211112222........",
-      ".......2211112222.......",
-      ".......22111122222......",
-      ".......2211112222.......",
-      ".......2244442222.......",
-      ".......2255552222.......",
-      ".......2244442222.......",
-      ".......22111122222......",
-      "......222111122222......",
-      ".....2226611662222......",
-      ".....2266666666222......",
-      ".....2266666666222......",
-      ".....2266666666222......",
-      ".....2266617166222......",
-      ".....2266666666222......",
-      ".....2226666662222......",
-      ".B....226666622222......",
-      ".BB...22.666.22222......",
-      ".BBB...2.666.2222.......",
-      "..BBB..........222......",
-      "..BBB..........22.......",
-      "...BB...........2.......",
-      "...B....................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:3, name:"Prism #003", rarity:"EPIC", rarityScore:88,
+    description:"A rotated diamond prism refracts swap routes. Pure geometry — the AMM Wizard's sigil.",
+    traits:[{t:"Shape",v:"Diamond"},{t:"Style",v:"Prism"},{t:"Color",v:"Cyan/Gold"},{t:"Lines",v:"Nested"},{t:"Effect",v:"Refraction"}],
+    render(size) {
+      const cx = size/2, cy = size/2, R = size*0.36;
+      const c1 = "#00FFD1", c2 = "#FFD700", c3 = "#8458FF";
+      const pts = (r) => `${cx},${cy-r} ${cx+r*0.7},${cy} ${cx},${cy+r} ${cx-r*0.7},${cy}`;
+      let content = `
+        <!-- Outer diamond -->
+        <polygon points="${pts(R)}" fill="none" stroke="${c1}" stroke-width="2"/>
+        <!-- Middle diamond -->
+        <polygon points="${pts(R*0.68)}" fill="none" stroke="${c3}" stroke-width="1.2" opacity="0.7"/>
+        <!-- Inner diamond -->
+        <polygon points="${pts(R*0.4)}" fill="none" stroke="${c1}" stroke-width="1" opacity="0.5"/>
+        <!-- Corner lines to center -->
+        <line x1="${cx}" y1="${cy-R}" x2="${cx}" y2="${cy-R*0.4}" stroke="${c2}" stroke-width="0.8" opacity="0.5"/>
+        <line x1="${cx+R*0.7}" y1="${cy}" x2="${cx+R*0.4*0.7}" y2="${cy}" stroke="${c2}" stroke-width="0.8" opacity="0.5"/>
+        <line x1="${cx}" y1="${cy+R}" x2="${cx}" y2="${cy+R*0.4}" stroke="${c2}" stroke-width="0.8" opacity="0.5"/>
+        <line x1="${cx-R*0.7}" y1="${cy}" x2="${cx-R*0.4*0.7}" y2="${cy}" stroke="${c2}" stroke-width="0.8" opacity="0.5"/>
+        <!-- Glow dots at corners -->
+        <circle cx="${cx}" cy="${cy-R}" r="3.5" fill="${c1}" opacity="0.9"/>
+        <circle cx="${cx+R*0.7}" cy="${cy}" r="3.5" fill="${c1}" opacity="0.9"/>
+        <circle cx="${cx}" cy="${cy+R}" r="3.5" fill="${c1}" opacity="0.9"/>
+        <circle cx="${cx-R*0.7}" cy="${cy}" r="3.5" fill="${c1}" opacity="0.9"/>
+        <!-- Z center -->
+        ${zLogo(cx, cy, R*0.26, c1, 1.8)}
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#080812", content);
+    }
   },
+
+  // ── 4. Orbit #004 ───────────────────────────────────────────────────────
   {
-    id:4, name:"Diamond Degen", rarity:"EPIC", rarityScore:84,
-    bg:"#AA2200",
-    description:"Laser eyes since genesis. Diamond hands, diamond mind. Has never once touched the sell button.",
-    traits:[{t:"Background",v:"Blood Orange"},{t:"Skin",v:"Dark"},{t:"Hair",v:"Wild Black"},{t:"Hoodie",v:"Degen Black"},{t:"Eyes",v:"Red Laser"},{t:"Chain",v:"Diamond Chain"}],
-    palette:["#1A1A1A","#7B5C42","#222222","#FF0000","#FFD700","#333333","#FFFFFF","#FF6600","#444444","#888888","#C0C0C0","#990000","#FFAA00","#FF4400","#BB0000"],
-    art:[
-      ".......222222222........",
-      "......22111112222.......",
-      "......22111112222.......",
-      ".......2211112222.......",
-      ".......2211112222.......",
-      ".......2244442222.......",
-      ".......2244442222.......",
-      ".......2211112222.......",
-      ".......2277772222.......",
-      ".......2255552222.......",
-      ".......2211112222.......",
-      "......222211122222......",
-      ".....222331133222.......",
-      ".....233333333332.......",
-      ".....233333333332.......",
-      ".....233333333332.......",
-      ".....233511153332.......",
-      ".....233333333332.......",
-      ".....223333333322.......",
-      "......22333333222.......",
-      ".....222.3333.222.......",
-      ".....222.3333.222.......",
-      ".....22..3333..22.......",
-      ".....2...3333...2.......",
-      ".....2...........2......",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:4, name:"Orbit #004", rarity:"EPIC", rarityScore:84,
+    description:"Three elliptical orbits — the degen's token portfolio spinning in perpetual motion.",
+    traits:[{t:"Shape",v:"Ellipses"},{t:"Style",v:"Orbital"},{t:"Color",v:"Purple/Cyan"},{t:"Paths",v:"3 Orbits"},{t:"Nodes",v:"4 Dots"}],
+    render(size) {
+      const cx = size/2, cy = size/2;
+      const c1 = "#00FFD1", c2 = "#8458FF", c3 = "#AA44FF";
+      let content = `
+        <!-- Outer ellipse -->
+        <ellipse cx="${cx}" cy="${cy}" rx="${size*0.4}" ry="${size*0.22}" fill="none" stroke="${c2}" stroke-width="1.5" transform="rotate(-20 ${cx} ${cy})"/>
+        <!-- Mid ellipse -->
+        <ellipse cx="${cx}" cy="${cy}" rx="${size*0.32}" ry="${size*0.18}" fill="none" stroke="${c1}" stroke-width="1.2" opacity="0.7" transform="rotate(15 ${cx} ${cy})"/>
+        <!-- Inner ellipse -->
+        <ellipse cx="${cx}" cy="${cy}" rx="${size*0.22}" ry="${size*0.12}" fill="none" stroke="${c3}" stroke-width="1" opacity="0.5" transform="rotate(-10 ${cx} ${cy})"/>
+        <!-- Arrow on outer orbit -->
+        <polygon points="${cx+size*0.38},${cy-size*0.04} ${cx+size*0.3},${cy-size*0.08} ${cx+size*0.3},${cy}" fill="${c2}" opacity="0.9"/>
+        <!-- Arrow on inner orbit -->
+        <polygon points="${cx-size*0.2},${cy-size*0.06} ${cx-size*0.27},${cy-size*0.02} ${cx-size*0.25},${cy+size*0.08}" fill="${c1}" opacity="0.9"/>
+        <!-- Center dot cluster -->
+        <circle cx="${cx}" cy="${cy}" r="${size*0.08}" fill="none" stroke="${c1}" stroke-width="1.5"/>
+        ${zLogo(cx, cy, size*0.075, c1, 1.6)}
+        <!-- Orbit nodes -->
+        <circle cx="${cx+size*0.39}" cy="${cy}" r="4" fill="${c1}" opacity="0.8"/>
+        <circle cx="${cx-size*0.34}" cy="${cy-size*0.1}" r="3" fill="${c2}" opacity="0.8"/>
+        <circle cx="${cx+size*0.1}" cy="${cy+size*0.2}" r="3" fill="${c3}" opacity="0.7"/>
+        <circle cx="${cx-size*0.15}" cy="${cy+size*0.15}" r="2.5" fill="${c1}" opacity="0.6"/>
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#07050F", content);
+    }
   },
+
+  // ── 5. Matrix #005 ──────────────────────────────────────────────────────
   {
-    id:5, name:"Speed Arb", rarity:"RARE", rarityScore:75,
-    bg:"#003300",
-    description:"Faster than a block. HUD visor, racing suit. Spots price gaps and closes them before anyone sees.",
-    traits:[{t:"Background",v:"Matrix Green"},{t:"Skin",v:"Olive"},{t:"Helmet",v:"Racing Helmet"},{t:"Visor",v:"HUD Green"},{t:"Suit",v:"Speed Suit"},{t:"Boots",v:"Turbo"}],
-    palette:["#1A1A1A","#7B6A42","#00FF41","#003300","#00FFCC","#005500","#80FF90","#AAFFAA","#444444","#FF4444","#FFFFFF","#004400","#66FF66","#00AA22","#CCFFCC"],
-    art:[
-      "......333333333222......",
-      ".....33333333332222.....",
-      ".....33111111332222.....",
-      ".....33111111332222.....",
-      ".....33155551332222.....",
-      ".....33155551332222.....",
-      ".....33111111332222.....",
-      ".....33111111332222.....",
-      ".....33111111332222.....",
-      ".....33333333332222.....",
-      "......333333333222......",
-      ".....336661666332.......",
-      ".....366666666632.......",
-      ".....366666666632.......",
-      ".....366666666632.......",
-      ".....366699966632.......",
-      ".....366666666632.......",
-      ".....366666666632.......",
-      ".....336666666332.......",
-      "......36666666322.......",
-      ".....332.6666.3322......",
-      ".....332.6666.3322......",
-      ".....33..6666..322......",
-      "....333..........22.....",
-      "....33...........22.....",
-      "....3.............2.....",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:5, name:"Matrix #005", rarity:"RARE", rarityScore:75,
+    description:"Binary grid with a centered Z — the arbitrageur's map of the blockchain state.",
+    traits:[{t:"Shape",v:"Grid"},{t:"Style",v:"Matrix"},{t:"Color",v:"Green"},{t:"Code",v:"Binary"},{t:"Effect",v:"Scan"}],
+    render(size) {
+      const cx = size/2, cy = size/2;
+      const c1 = "#00FF41", c2 = "#006622";
+      let grid = "";
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+          const x = 20 + i * (size-40)/8;
+          const y = 20 + j * (size-40)/8;
+          const v = Math.sin(i*0.8+j*0.6) > 0 ? "1" : "0";
+          const op = 0.1 + Math.abs(Math.sin(i*j)) * 0.4;
+          grid += `<text x="${x}" y="${y}" font-family="monospace" font-size="9" fill="${c1}" opacity="${op.toFixed(2)}">${v}</text>`;
+        }
+      }
+      let content = `
+        ${grid}
+        <!-- Outer box -->
+        <rect x="${cx-size*0.28}" y="${cy-size*0.28}" width="${size*0.56}" height="${size*0.56}" fill="rgba(0,255,65,0.04)" stroke="${c1}" stroke-width="1.5"/>
+        <!-- Inner box -->
+        <rect x="${cx-size*0.18}" y="${cy-size*0.18}" width="${size*0.36}" height="${size*0.36}" fill="rgba(0,255,65,0.06)" stroke="${c1}" stroke-width="1" opacity="0.6"/>
+        <!-- Arrow -->
+        <polygon points="${cx+size*0.3},${cy} ${cx+size*0.2},${cy-8} ${cx+size*0.2},${cy+8}" fill="${c1}" opacity="0.8"/>
+        <!-- Z center -->
+        ${zLogo(cx, cy, size*0.1, c1, 2)}
+        <!-- Scan line -->
+        <line x1="${cx-size*0.28}" y1="${cy+size*0.1}" x2="${cx+size*0.28}" y2="${cy+size*0.1}" stroke="${c1}" stroke-width="1.5" opacity="0.4" stroke-dasharray="4 3"/>
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#030A04", content);
+    }
   },
+
+  // ── 6. Crown #006 ───────────────────────────────────────────────────────
   {
-    id:6, name:"LP Queen", rarity:"RARE", rarityScore:72,
-    bg:"#AA0055",
-    description:"Rules liquidity pools with style. Crown of LP tokens, never rage-removed. Earns fees in her sleep.",
-    traits:[{t:"Background",v:"Hot Pink"},{t:"Skin",v:"Light"},{t:"Crown",v:"LP Crown"},{t:"Dress",v:"Queen Gown"},{t:"Eyes",v:"Blue"},{t:"Earrings",v:"Token Drops"}],
-    palette:["#1A1A1A","#E8C9A0","#FF69B4","#FFD700","#0066FF","#FF88CC","#FFFFFF","#CC0066","#FFAADD","#88CCFF","#003399","#F0DAB8","#FFEECC","#FF4499","#DD0088"],
-    art:[
-      ".......444444444........",
-      "......44333344444.......",
-      "......43333334444.......",
-      ".......4333334444.......",
-      ".......4311134444.......",
-      ".......4355534444.......",
-      ".......4311134444.......",
-      ".......4399934444.......",
-      ".......4355534444.......",
-      ".......4311134444.......",
-      ".......43333344444......",
-      "......443333344444......",
-      ".....44333633364444.....",
-      ".....43336666634444.....",
-      ".....43366666664444.....",
-      ".....43366666664444.....",
-      ".....43368888634444.....",
-      ".....43366666664444.....",
-      ".....43333666334444.....",
-      "......4333666344444.....",
-      ".....444.6666.444.......",
-      ".....444.6666.444.......",
-      ".....44..6666..44.......",
-      ".....4...6666...4.......",
-      ".....4...........4......",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:6, name:"Crown #006", rarity:"RARE", rarityScore:72,
+    description:"Triple-point crown of the LP Queen. Three peaks represent three pools, eternally profitable.",
+    traits:[{t:"Shape",v:"Crown"},{t:"Style",v:"Royal"},{t:"Color",v:"Gold/Pink"},{t:"Peaks",v:"3 Spires"},{t:"Effect",v:"Shimmer"}],
+    render(size) {
+      const cx = size/2, cy = size/2;
+      const c1 = "#FFD700", c2 = "#FF69B4", c3 = "#FFAA00";
+      let content = `
+        <!-- Crown base -->
+        <path d="M${cx-size*0.32},${cy+size*0.18} L${cx-size*0.32},${cy-size*0.05} L${cx-size*0.2},${cy-size*0.22} L${cx},${cy-size*0.08} L${cx+size*0.2},${cy-size*0.22} L${cx+size*0.32},${cy-size*0.05} L${cx+size*0.32},${cy+size*0.18} Z"
+          fill="none" stroke="${c1}" stroke-width="2.5" stroke-linejoin="round"/>
+        <!-- Crown fill subtle -->
+        <path d="M${cx-size*0.32},${cy+size*0.18} L${cx-size*0.32},${cy-size*0.05} L${cx-size*0.2},${cy-size*0.22} L${cx},${cy-size*0.08} L${cx+size*0.2},${cy-size*0.22} L${cx+size*0.32},${cy-size*0.05} L${cx+size*0.32},${cy+size*0.18} Z"
+          fill="rgba(255,215,0,0.05)"/>
+        <!-- Inner crown smaller -->
+        <path d="M${cx-size*0.22},${cy+size*0.12} L${cx-size*0.22},${cy} L${cx-size*0.13},${cy-size*0.14} L${cx},${cy-size*0.04} L${cx+size*0.13},${cy-size*0.14} L${cx+size*0.22},${cy} L${cx+size*0.22},${cy+size*0.12} Z"
+          fill="none" stroke="${c2}" stroke-width="1.2" stroke-linejoin="round" opacity="0.6"/>
+        <!-- Gem dots -->
+        <circle cx="${cx-size*0.2}" cy="${cy-size*0.22}" r="5" fill="${c2}" opacity="0.9"/>
+        <circle cx="${cx}" cy="${cy-size*0.22+size*0.14}" r="5" fill="${c1}" opacity="0.9"/>
+        <circle cx="${cx+size*0.2}" cy="${cy-size*0.22}" r="5" fill="${c2}" opacity="0.9"/>
+        <!-- Z center -->
+        ${zLogo(cx, cy+size*0.05, size*0.1, c1, 2)}
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#0C0808", content);
+    }
   },
+
+  // ── 7. Scar #007 ────────────────────────────────────────────────────────
   {
-    id:7, name:"Rekt Survivor", rarity:"RARE", rarityScore:69,
-    bg:"#224400",
-    description:"3 rug pulls, 2 crashes. Still here. Battle scars are proof of survival. WAGMI.",
-    traits:[{t:"Background",v:"Toxic Green"},{t:"Skin",v:"Scarred"},{t:"Eye Patch",v:"Battle Patch"},{t:"Jacket",v:"Rekt Jacket"},{t:"Eyes",v:"Weary Orange"},{t:"Bandage",v:"Arm Wrap"}],
-    palette:["#1A1A1A","#C8906A","#333333","#FF6600","#FFFFFF","#888888","#AAAAAA","#FF3300","#666666","#FFAA00","#B07050","#444444","#FF8800","#554422","#997733"],
-    art:[
-      ".......222222222........",
-      "......22111112222.......",
-      "......22111112222.......",
-      ".......2211112222.......",
-      ".......2244442222.......",
-      ".......2248442222.......",
-      ".......2244442222.......",
-      ".......2291192222.......",
-      ".......2255552222.......",
-      ".......2211112222.......",
-      "......222111122222......",
-      ".....2223311332222......",
-      ".....233333333332.......",
-      ".....233333333332.......",
-      ".....233333333332.......",
-      ".....233398833332.......",
-      ".....233333333332.......",
-      ".....233333333332.......",
-      ".....223333333322.......",
-      "......22333333222.......",
-      ".....222.3333.222.......",
-      ".....222.3333.222.......",
-      "....6222..333..222......",
-      "....66....333...2.......",
-      "....6.............2.....",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:7, name:"Scar #007", rarity:"RARE", rarityScore:69,
+    description:"Fractured hexagon — the battle geometry of the Rekt Survivor. Each crack tells a rug pull story.",
+    traits:[{t:"Shape",v:"Hexagon"},{t:"Style",v:"Fractured"},{t:"Color",v:"Orange/Red"},{t:"Cracks",v:"3 Fractures"},{t:"Effect",v:"Battle"}],
+    render(size) {
+      const cx = size/2, cy = size/2, R = size*0.36;
+      const c1 = "#FF6600", c2 = "#FF3300", c3 = "#FFAA00";
+      const hex = (r) => {
+        const pts = [];
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI/3)*i - Math.PI/6;
+          pts.push(`${(cx+r*Math.cos(a)).toFixed(1)},${(cy+r*Math.sin(a)).toFixed(1)}`);
+        }
+        return pts.join(" ");
+      };
+      let content = `
+        <!-- Outer hex -->
+        <polygon points="${hex(R)}" fill="none" stroke="${c1}" stroke-width="2"/>
+        <!-- Inner hex -->
+        <polygon points="${hex(R*0.6)}" fill="none" stroke="${c3}" stroke-width="1.2" opacity="0.6"/>
+        <!-- Fracture lines -->
+        <line x1="${cx}" y1="${cy-R}" x2="${cx+R*0.3}" y2="${cy+R*0.2}" stroke="${c2}" stroke-width="1.8" opacity="0.7"/>
+        <line x1="${cx-R*0.5}" y1="${cy+R*0.5}" x2="${cx+R*0.4}" y2="${cy-R*0.1}" stroke="${c2}" stroke-width="1.5" opacity="0.5"/>
+        <line x1="${cx+R*0.5}" y1="${cy+R*0.5}" x2="${cx-R*0.2}" y2="${cy+R*0.1}" stroke="${c2}" stroke-width="1.2" opacity="0.4"/>
+        <!-- Corner dots -->
+        <circle cx="${cx}" cy="${cy-R}" r="4" fill="${c1}" opacity="0.9"/>
+        <circle cx="${cx+R*0.87}" cy="${cy+R*0.5}" r="3" fill="${c3}" opacity="0.7"/>
+        <circle cx="${cx-R*0.87}" cy="${cy+R*0.5}" r="3" fill="${c3}" opacity="0.7"/>
+        <!-- Z center -->
+        ${zLogo(cx, cy, size*0.1, c1, 2)}
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#0C0500", content);
+    }
   },
+
+  // ── 8. Radar #008 ───────────────────────────────────────────────────────
   {
-    id:8, name:"Node Runner", rarity:"UNCOMMON", rarityScore:56,
-    bg:"#001133",
-    description:"3 chains, 24/7. Headset on, server rack tattoo. Names pets after consensus mechanisms.",
-    traits:[{t:"Background",v:"Space Blue"},{t:"Skin",v:"Pale"},{t:"Hair",v:"Dark"},{t:"Headset",v:"Node Pro"},{t:"Shirt",v:"Tech Tee"},{t:"Tattoo",v:"Server Rack"}],
-    palette:["#1A1A1A","#C8A882","#222222","#00FF41","#0055AA","#AAAAAA","#FFFFFF","#444444","#888888","#4488FF","#88CCFF","#003388","#DDB898","#6699FF","#002266"],
-    art:[
-      "......333222223333......",
-      ".....33322222233333.....",
-      ".....33311111233333.....",
-      ".....33311111233333.....",
-      ".....33314441233333.....",
-      ".....33314441233333.....",
-      ".....33311111233333.....",
-      ".....33311111233333.....",
-      ".....33399991233333.....",
-      ".....33311111233333.....",
-      ".....33311111233333.....",
-      "......33311113333.......",
-      ".....333561165333.......",
-      ".....355566665553.......",
-      ".....355566665553.......",
-      ".....355566665553.......",
-      ".....355577765553.......",
-      ".....355566665553.......",
-      ".....355566665553.......",
-      "......55566665553.......",
-      ".....555.6666.5553......",
-      ".....555.6666.5553......",
-      ".....55..6666..553......",
-      ".....5...6666...53......",
-      ".....5...........5......",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:8, name:"Radar #008", rarity:"UNCOMMON", rarityScore:56,
+    description:"Scanning the chain. The Node Runner's radar sweeps for new blocks, broadcasting from the edge.",
+    traits:[{t:"Shape",v:"Radar"},{t:"Style",v:"Scan"},{t:"Color",v:"Cyan/Blue"},{t:"Rings",v:"4 Rings"},{t:"Sweep",v:"Active"}],
+    render(size) {
+      const cx = size/2, cy = size/2, R = size*0.38;
+      const c1 = "#00FFD1", c2 = "#0088FF", c3 = "#004488";
+      let rings = "";
+      for (let i = 1; i <= 4; i++) {
+        rings += `<circle cx="${cx}" cy="${cy}" r="${R*i/4}" fill="none" stroke="${i===4?c1:c2}" stroke-width="${i===4?1.5:0.8}" opacity="${0.2+i*0.15}"/>`;
+      }
+      let content = `
+        ${rings}
+        <!-- Cross hairs -->
+        <line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" stroke="${c2}" stroke-width="0.8" opacity="0.3"/>
+        <line x1="${cx}" y1="${cy-R}" x2="${cx}" y2="${cy+R}" stroke="${c2}" stroke-width="0.8" opacity="0.3"/>
+        <line x1="${cx-R*0.7}" y1="${cy-R*0.7}" x2="${cx+R*0.7}" y2="${cy+R*0.7}" stroke="${c2}" stroke-width="0.5" opacity="0.2"/>
+        <line x1="${cx+R*0.7}" y1="${cy-R*0.7}" x2="${cx-R*0.7}" y2="${cy+R*0.7}" stroke="${c2}" stroke-width="0.5" opacity="0.2"/>
+        <!-- Sweep triangle -->
+        <path d="M${cx},${cy} L${cx+R*0.92},${cy-R*0.4}" stroke="${c1}" stroke-width="1.5" opacity="0.6"/>
+        <path d="M${cx},${cy} L${cx+R*0.85},${cy+R*0.1}" stroke="${c1}" stroke-width="0.5" opacity="0.2"/>
+        <!-- Blip dots -->
+        <circle cx="${cx+R*0.55}" cy="${cy-R*0.3}" r="4" fill="${c1}" opacity="0.9"/>
+        <circle cx="${cx-R*0.4}" cy="${cy+R*0.5}" r="3" fill="${c1}" opacity="0.6"/>
+        <circle cx="${cx+R*0.2}" cy="${cy+R*0.7}" r="2.5" fill="${c1}" opacity="0.4"/>
+        <!-- Z -->
+        ${zLogo(cx, cy, size*0.09, c1, 1.8)}
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#040810", content);
+    }
   },
+
+  // ── 9. Helix #009 ───────────────────────────────────────────────────────
   {
-    id:9, name:"Gas Mizer", rarity:"UNCOMMON", rarityScore:53,
-    bg:"#220044",
-    description:"21,000 gas, not one unit more. Calculator necklace, GWEI hoodie. EIP-1559 opinions held strongly.",
-    traits:[{t:"Background",v:"Deep Purple"},{t:"Skin",v:"Olive"},{t:"Hair",v:"Green Dyed"},{t:"Glasses",v:"Data Specs"},{t:"Hoodie",v:"GWEI"},{t:"Necklace",v:"Calculator"}],
-    palette:["#1A1A1A","#9B8060","#00AA22","#FFDC00","#7700CC","#AAAAAA","#FFFFFF","#4A0090","#AA44FF","#CC88FF","#55FF55","#444422","#33AA44","#BBBBBB","#662299"],
-    art:[
-      ".......333222222........",
-      "......333311122222......",
-      "......333311122222......",
-      ".......33311122222......",
-      ".......33311122222......",
-      ".......33344422222......",
-      ".......33344422222......",
-      ".......33344422222......",
-      ".......33311122222......",
-      ".......33344422222......",
-      ".......33311122222......",
-      "......333311122222......",
-      ".....333551155222.......",
-      ".....355555555552.......",
-      ".....355555555552.......",
-      ".....355555555552.......",
-      ".....355574475552.......",
-      ".....355555555552.......",
-      ".....355555555552.......",
-      "......55555555552.......",
-      ".....555.5555.552.......",
-      "....4555.5555.552.......",
-      "....44...5555..52.......",
-      "....4....5555...5.......",
-      "....4............5......",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:9, name:"Helix #009", rarity:"UNCOMMON", rarityScore:53,
+    description:"Twisted fee formula. The Gas Mizer's optimization loop spiraling toward zero.",
+    traits:[{t:"Shape",v:"Helix"},{t:"Style",v:"Spiral"},{t:"Color",v:"Purple/Green"},{t:"Loops",v:"3 Coils"},{t:"Effect",v:"Twist"}],
+    render(size) {
+      const cx = size/2, cy = size/2;
+      const c1 = "#AA44FF", c2 = "#00FF88", c3 = "#7722BB";
+      let helix1 = "M";
+      let helix2 = "M";
+      for (let i = 0; i <= 80; i++) {
+        const t = (i/80) * Math.PI * 3;
+        const x = cx + Math.cos(t) * (size*0.36 - t*size*0.02);
+        const y = cy + Math.sin(t) * (size*0.2  - t*size*0.01);
+        const x2 = cx + Math.cos(t+Math.PI) * (size*0.34 - t*size*0.02);
+        const y2 = cy + Math.sin(t+Math.PI) * (size*0.18 - t*size*0.01);
+        helix1 += (i===0?"":",")+x.toFixed(1)+","+y.toFixed(1);
+        helix2 += (i===0?"":",")+x2.toFixed(1)+","+y2.toFixed(1);
+      }
+      let content = `
+        <polyline points="${helix1}" fill="none" stroke="${c1}" stroke-width="1.8" opacity="0.8"/>
+        <polyline points="${helix2}" fill="none" stroke="${c2}" stroke-width="1.5" opacity="0.6"/>
+        <!-- Center circle -->
+        <circle cx="${cx}" cy="${cy}" r="${size*0.1}" fill="none" stroke="${c1}" stroke-width="1.5"/>
+        ${zLogo(cx, cy, size*0.09, c1, 1.8)}
+        <!-- Endpoint dots -->
+        <circle cx="${cx+size*0.34}" cy="${cy}" r="4" fill="${c1}" opacity="0.9"/>
+        <circle cx="${cx-size*0.32}" cy="${cy}" r="4" fill="${c2}" opacity="0.9"/>
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#0A0416", content);
+    }
   },
+
+  // ── 10. Block #000 ──────────────────────────────────────────────────────
   {
-    id:10, name:"Genesis Node", rarity:"COMMON", rarityScore:42,
-    bg:"#111111",
-    description:"Block zero. The first and the simplest. Without this node, nothing else exists in SwapZone.",
-    traits:[{t:"Background",v:"Dark"},{t:"Skin",v:"Gray"},{t:"Eyes",v:"Green"},{t:"Outfit",v:"Plain Tee"},{t:"Badge",v:"#0"},{t:"Aura",v:"None"}],
-    palette:["#1A1A1A","#999999","#555555","#00FF41","#DDDDDD","#333333","#FFFFFF","#AAAAAA","#666666","#444444","#BBBBBB","#222222","#CCCCCC","#888888","#EEEEEE"],
-    art:[
-      ".......222222222........",
-      "......22111112222.......",
-      "......22111112222.......",
-      ".......2211112222.......",
-      ".......2211112222.......",
-      ".......2244442222.......",
-      ".......2244442222.......",
-      ".......2244442222.......",
-      ".......2211112222.......",
-      ".......2237732222.......",
-      ".......2211112222.......",
-      "......222111122222......",
-      ".....2225511552222......",
-      ".....255555555552.......",
-      ".....255555555552.......",
-      ".....255555555552.......",
-      ".....255578875552.......",
-      ".....255555555552.......",
-      ".....255555555552.......",
-      "......55555555552.......",
-      ".....555.5555.552.......",
-      ".....555.5555.552.......",
-      ".....55..5555..52.......",
-      ".....5...5555...5.......",
-      ".....5...........5......",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-      "........................",
-    ],
+    id:10, name:"Block #000", rarity:"COMMON", rarityScore:42,
+    description:"The genesis block. Pure, minimal, foundational. Everything SwapZone was built upon.",
+    traits:[{t:"Shape",v:"Square"},{t:"Style",v:"Minimal"},{t:"Color",v:"Gray/Cyan"},{t:"Nesting",v:"4 Levels"},{t:"Effect",v:"None"}],
+    render(size) {
+      const cx = size/2, cy = size/2;
+      const c1 = "#00FFD1", c2 = "#444444", c3 = "#888888";
+      let content = `
+        <!-- Nested squares -->
+        <rect x="${cx-size*0.38}" y="${cy-size*0.38}" width="${size*0.76}" height="${size*0.76}" fill="none" stroke="${c2}" stroke-width="1.5"/>
+        <rect x="${cx-size*0.28}" y="${cy-size*0.28}" width="${size*0.56}" height="${size*0.56}" fill="none" stroke="${c3}" stroke-width="1.2" opacity="0.7"/>
+        <rect x="${cx-size*0.18}" y="${cy-size*0.18}" width="${size*0.36}" height="${size*0.36}" fill="none" stroke="${c1}" stroke-width="1.5" opacity="0.6"/>
+        <rect x="${cx-size*0.1}" y="${cy-size*0.1}" width="${size*0.2}" height="${size*0.2}" fill="none" stroke="${c1}" stroke-width="1" opacity="0.4"/>
+        <!-- Corner accents -->
+        <line x1="${cx-size*0.38}" y1="${cy-size*0.38}" x2="${cx-size*0.28}" y2="${cy-size*0.28}" stroke="${c1}" stroke-width="1.5" opacity="0.5"/>
+        <line x1="${cx+size*0.38}" y1="${cy+size*0.38}" x2="${cx+size*0.28}" y2="${cy+size*0.28}" stroke="${c1}" stroke-width="1.5" opacity="0.5"/>
+        <!-- Z center -->
+        ${zLogo(cx, cy, size*0.1, c1, 1.8)}
+        ${scanlines(size)}
+      `;
+      return svgWrap(size, "#080808", content);
+    }
   },
 ];
