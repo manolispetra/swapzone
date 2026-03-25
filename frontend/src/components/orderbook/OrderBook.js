@@ -56,7 +56,7 @@ export default function OrderBook() {
   const [error,        setError]        = useState(null);
   const [tx,           setTx]           = useState(null);
 
-  useEffect(() => { setOrders(loadOrders()); loadPair(chartToken.address); }, []);
+  useEffect(() => { setOrders(loadOrders()); loadPair(chartToken.address); setChartUrl("https://www.geckoterminal.com/monad/pools?embed=1&light_chart=0"); }, []);
 
   useEffect(() => {
     if (!address) return;
@@ -80,9 +80,17 @@ export default function OrderBook() {
     try {
       const pair = await dexSearch(addr);
       setPairData(pair);
-      if (pair?.pairAddress) setChartUrl(`https://www.geckoterminal.com/monad/pools/${pair.pairAddress}?embed=1&light_chart=0`);
-      else setChartUrl("");
-    } catch { setPairData(null); setChartUrl(""); }
+      if (pair?.pairAddress) {
+        // GeckoTerminal embed — works for any pool on any network
+        setChartUrl("https://www.geckoterminal.com/monad/pools/" + pair.pairAddress + "?embed=1&light_chart=0&info=0");
+      } else {
+        // Fallback: show GeckoTerminal Monad overview when no specific pool found
+        setChartUrl("https://www.geckoterminal.com/monad/pools?embed=1&light_chart=0");
+      }
+    } catch {
+      setPairData(null);
+      setChartUrl("https://www.geckoterminal.com/monad/pools?embed=1&light_chart=0");
+    }
     finally { setLoadingPair(false); }
   }
 
