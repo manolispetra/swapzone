@@ -15,12 +15,29 @@ async function fetchLatestProfiles() {
   return monad.slice(0, 30);
 }
 
-// Fetch trending (most boosted) tokens
+// Fetch trending tokens on Monad — search by volume
 async function fetchTrendingTokens() {
-  const res = await fetch(DS + "/token-boosts/top/v1");
-  const d   = await res.json();
-  const monad = (Array.isArray(d) ? d : []).filter(t => t.chainId === "monad");
-  return monad.slice(0, 30);
+  // Search multiple popular Monad tokens to get pair data
+  const queries = ["WMON", "USDC monad", "WETH monad", "WBTC monad", "monad DEX"];
+  const allPairs = [];
+  const seen = new Set();
+  for (const q of queries) {
+    try {
+      const res = await fetch(DS + "/latest/dex/search?q=" + encodeURIComponent(q));
+      const d   = await res.json();
+      for (const p of (d.pairs || [])) {
+        if (p.chainId === "monad" && !seen.has(p.pairAddress)) {
+          seen.add(p.pairAddress);
+          allPairs.push(p);
+        }
+      }
+    } catch {}
+  }
+  return allPairs
+    .filter(p => parseFloat(p.liquidity?.usd || 0) > 10)
+    .sort((a,b) => parseFloat(b.volume?.h24||0) - parseFloat(a.volume?.h24||0))
+    .slice(0,30)
+    .map(p => ({ tokenAddress: p.baseToken?.address, pair: p, icon: null }));
 }
 
 // Search pairs on monad
@@ -87,19 +104,13 @@ export default function TokenExplorer() {
           const enriched = await enrichWithPairData(profiles);
           setItems(enriched);
         } else {
-          // Fallback: search for monad tokens
           const pairs = await searchTokens("monad WMON");
           setItems(pairs.map(p => ({ tokenAddress: p.baseToken?.address, pair: p, icon: null })));
         }
       } else {
-        const boosted = await fetchTrendingTokens();
-        if (boosted.length > 0) {
-          const enriched = await enrichWithPairData(boosted);
-          setItems(enriched);
-        } else {
-          const pairs = await searchTokens("monad");
-          setItems(pairs.map(p => ({ tokenAddress: p.baseToken?.address, pair: p })));
-        }
+        // Trending already returns items with pair data
+        const trending = await fetchTrendingTokens();
+        setItems(trending);
       }
       setLastUpdate(new Date());
     } catch(e) {
