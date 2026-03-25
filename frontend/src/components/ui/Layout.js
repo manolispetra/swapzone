@@ -23,7 +23,7 @@ export default function Layout({ children, title = "SwapZone DEX" }) {
 
       <div className="min-h-screen flex flex-col" style={{ position:"relative", zIndex:1 }}>
         <Navbar />
-        <main className="pt-16 sm:pt-20 px-3 sm:px-4 max-w-7xl w-full mx-auto pb-16 flex-1" style={{ paddingRight: 'calc(0.75rem + 40px)' }}>
+        <main className="pt-16 sm:pt-20 px-3 sm:px-4 pb-16 flex-1" style={{ maxWidth:"calc(100vw - 300px)", width:"100%", margin:"0 auto", transition:"max-width 0.25s ease" }}>
           {children}
         </main>
 

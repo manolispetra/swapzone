@@ -24,14 +24,31 @@ async function findPairData(tokenAddress) {
   if (!tokenAddress || tokenAddress === "native") {
     tokenAddress = TOKEN_ADDRESSES.WMON;
   }
-  // Normalize address to lowercase for API
   const addr = tokenAddress.toLowerCase();
-  const r = await fetch(DS + "/tokens/" + addr);
-  if (!r.ok) throw new Error("API error " + r.status);
-  const d = await r.json();
-  const pairs = (d.pairs || []);
-  // Prefer monad chain
-  return pairs.find(p => p.chainId === "monad") || pairs[0] || null;
+  
+  try {
+    // Try token lookup first
+    const r = await fetch(DS + "/tokens/" + addr);
+    if (r.ok) {
+      const d = await r.json();
+      const pairs = (d.pairs || []);
+      const monad = pairs.find(p => p.chainId === "monad");
+      if (monad) return monad;
+      if (pairs[0]) return pairs[0]; // fallback to any chain
+    }
+  } catch {}
+
+  // Fallback: search by address
+  try {
+    const r2 = await fetch(DS + "/search?q=" + addr);
+    if (r2.ok) {
+      const d2 = await r2.json();
+      const pairs = (d2.pairs || []);
+      return pairs.find(p => p.chainId === "monad") || pairs[0] || null;
+    }
+  } catch {}
+
+  return null;
 }
 
 function buildPoints(pair, period) {
