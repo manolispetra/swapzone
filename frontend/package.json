@@ -14,7 +14,8 @@
     "ethers": "^6.9.0",
     "framer-motion": "^11.0.3",
     "lucide-react": "^0.323.0",
-    "clsx": "^2.1.0"
+    "clsx": "^2.1.0",
+    "recharts": "^2.10.4"
   },
   "devDependencies": {
     "autoprefixer": "^10.0.1",

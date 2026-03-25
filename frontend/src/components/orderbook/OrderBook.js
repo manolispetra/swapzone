@@ -3,6 +3,7 @@ import { Plus, Loader2, BookOpen, ArrowRight, Search, TrendingUp, TrendingDown, 
 import { useWallet } from "../../hooks/useWallet";
 import { ethers } from "ethers";
 import { ADDRESSES, AMM_FACTORY_ABI, AMM_POOL_ABI, ERC20_ABI, MONAD_TOKENS, PROTOCOL_FEE_WALLET, PROTOCOL_FEE_BPS, getReadProvider, getContract, ensureAllowance } from "../../utils/contracts";
+import PriceChart from "./PriceChart";
 import { TokenLogo } from "../swap/SwapWidget";
 
 const ORDERS_KEY = "swapzone_orders_v2";
@@ -188,50 +189,8 @@ export default function OrderBook() {
 
       {/* Chart */}
       <div className="card" style={{padding:0,overflow:"hidden"}}>
-        <div className="flex flex-wrap items-center justify-between p-4 border-b border-border gap-3">
-          <div className="flex items-center gap-3">
-            <TokenLogo token={chartToken} size={34}/>
-            <div>
-              <div className="font-bold" style={{fontFamily:"'Rajdhani',sans-serif",fontSize:20}}>{chartToken.symbol}/USD</div>
-              {pairData&&(
-                <div className="flex items-center gap-3 text-xs" style={{fontFamily:"'Space Mono',monospace"}}>
-                  <span className="text-text font-bold text-sm">${parseFloat(pairData.priceUsd||0).toFixed(8)}</span>
-                  <span className={priceUp?"text-green-400 flex items-center gap-1":"text-red-400 flex items-center gap-1"}>
-                    {priceUp?<TrendingUp size={11}/>:<TrendingDown size={11}/>}
-                    {pairData.priceChange?.h24>0?"+":""}{parseFloat(pairData.priceChange?.h24||0).toFixed(2)}%
-                  </span>
-                  {pairData.pairAddress&&<a href={`https://dexscreener.com/monad/${pairData.pairAddress}`} target="_blank" rel="noreferrer" className="text-muted hover:text-primary flex items-center gap-1">DexScreener<ExternalLink size={9}/></a>}
-                </div>
-              )}
-            </div>
-          </div>
-          {pairData&&(
-            <div className="hidden sm:flex gap-5 text-xs" style={{fontFamily:"'Space Mono',monospace"}}>
-              {[{l:"24h Vol",v:`$${parseFloat(pairData.volume?.h24||0).toLocaleString()}`},{l:"Liquidity",v:`$${parseFloat(pairData.liquidity?.usd||0).toLocaleString()}`},{l:"Txns",v:String((pairData.txns?.h24?.buys||0)+(pairData.txns?.h24?.sells||0))}].map(({l,v})=>(
-                <div key={l} className="text-center"><div className="text-muted">{l}</div><div className="text-text font-bold">{v}</div></div>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-1">
-            {PERIODS.map(p=>(
-              <button key={p} onClick={()=>setChartPeriod(p)}
-                className={`px-3 py-1 rounded-lg text-xs border transition-all ${chartPeriod===p?"bg-primary/15 text-primary border-primary/30":"text-muted border-border/40 hover:text-text"}`}
-                style={{fontFamily:"'Space Mono',monospace"}}>{p}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{height:360,background:"#080808",position:"relative"}}>
-          {loadingPair&&<div className="absolute inset-0 flex items-center justify-center"><div className="spinner"/></div>}
-          {chartUrl?(
-            <iframe src={chartUrl} width="100%" height="100%" frameBorder="0" style={{display:"block",border:"none"}} title="Chart"/>
-          ):(
-            <div className="flex flex-col items-center justify-center h-full text-muted">
-              <TrendingUp size={32} className="mb-3 opacity-20"/>
-              <p className="text-sm" style={{fontFamily:"'Space Mono',monospace"}}>No chart data available</p>
-              <p className="text-xs mt-1 opacity-60" style={{fontFamily:"'Space Mono',monospace"}}>Search a token or select one above</p>
-            </div>
-          )}
-        </div>
+
+        <PriceChart tokenIn={chartToken} tokenOut={MONAD_TOKENS.find(t => t.symbol === "USDC") || MONAD_TOKENS[2]}/>
       </div>
 
       {/* Order form + list */}
